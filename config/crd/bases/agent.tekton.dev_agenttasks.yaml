@@ -1,0 +1,208 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.17.3
+  name: agenttasks.agent.tekton.dev
+spec:
+  group: agent.tekton.dev
+  names:
+    kind: AgentTask
+    listKind: AgentTaskList
+    plural: agenttasks
+    shortNames:
+    - at
+    singular: agenttask
+  scope: Namespaced
+  versions:
+  - name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: AgentTask is an experimental reusable Custom Task definition.
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: |-
+              AgentTaskSpec declares the Pipeline-visible contract and selected adapter.
+              Parameters intentionally support only omitted/string and object types in this PoC.
+            properties:
+              adapterRef:
+                description: AgentTaskAdapterRef selects an installed adapter and
+                  implementation-specific configuration references.
+                properties:
+                  name:
+                    maxLength: 317
+                    pattern: ^([a-z0-9]([-a-z0-9]{0,61}[a-z0-9])?)(\.[a-z0-9]([-a-z0-9]{0,61}[a-z0-9])?)*/[A-Za-z0-9]([-A-Za-z0-9_.]{0,61}[A-Za-z0-9])?$
+                    type: string
+                    x-kubernetes-validations:
+                    - message: adapter domain must not exceed 253 characters
+                      rule: self.split('/')[0].size() <= 253
+                    - message: adapter name must not exceed 63 characters
+                      rule: self.split('/')[1].size() <= 63
+                  params:
+                    items:
+                      description: Param declares an ParamValues to use for the parameter
+                        called name.
+                      properties:
+                        name:
+                          type: string
+                        value:
+                          x-kubernetes-preserve-unknown-fields: true
+                      required:
+                      - name
+                      - value
+                      type: object
+                    maxItems: 32
+                    type: array
+                    x-kubernetes-list-map-keys:
+                    - name
+                    x-kubernetes-list-type: map
+                required:
+                - name
+                type: object
+              description:
+                type: string
+              params:
+                description: Params declares string or object parameters. An omitted
+                  type means string.
+                items:
+                  description: |-
+                    ParamSpec defines arbitrary parameters needed beyond typed inputs (such as
+                    resources). Parameter values are provided by users as inputs on a TaskRun
+                    or PipelineRun.
+                  properties:
+                    default:
+                      description: |-
+                        Default is the value a parameter takes if no input value is supplied. If
+                        default is set, a Task may be executed without a supplied value for the
+                        parameter.
+                      x-kubernetes-preserve-unknown-fields: true
+                    description:
+                      description: |-
+                        Description is a user-facing description of the parameter that may be
+                        used to populate a UI.
+                      type: string
+                    enum:
+                      description: |-
+                        Enum declares a set of allowed param input values for tasks/pipelines that can be validated.
+                        If Enum is not set, no input validation is performed for the param.
+                      items:
+                        type: string
+                      type: array
+                    name:
+                      description: Name declares the name by which a parameter is
+                        referenced.
+                      type: string
+                    properties:
+                      additionalProperties:
+                        description: PropertySpec defines the struct for object keys
+                        properties:
+                          type:
+                            description: |-
+                              ParamType indicates the type of an input parameter;
+                              Used to distinguish between a single string and an array of strings.
+                            type: string
+                        type: object
+                      description: Properties is the JSON Schema properties to support
+                        key-value pairs parameter.
+                      type: object
+                    type:
+                      description: |-
+                        Type is the user-specified type of the parameter. The possible types
+                        are currently "string", "array" and "object", and "string" is the default.
+                      type: string
+                  required:
+                  - name
+                  type: object
+                maxItems: 64
+                type: array
+                x-kubernetes-list-map-keys:
+                - name
+                x-kubernetes-list-type: map
+              results:
+                items:
+                  description: AgentTaskResult declares one scalar string result exposed
+                    through CustomRun.
+                  properties:
+                    description:
+                      type: string
+                    name:
+                      maxLength: 128
+                      pattern: ^[_A-Za-z][_A-Za-z0-9.-]*$
+                      type: string
+                  required:
+                  - name
+                  type: object
+                maxItems: 64
+                type: array
+                x-kubernetes-list-map-keys:
+                - name
+                x-kubernetes-list-type: map
+              workspaces:
+                items:
+                  description: WorkspaceDeclaration is a declaration of a volume that
+                    a Task requires.
+                  properties:
+                    description:
+                      description: Description is an optional human readable description
+                        of this volume.
+                      type: string
+                    mountPath:
+                      description: MountPath overrides the directory that the volume
+                        will be made available at.
+                      type: string
+                    name:
+                      description: Name is the name by which you can bind the volume
+                        at runtime.
+                      type: string
+                    optional:
+                      description: |-
+                        Optional marks a Workspace as not being required in TaskRuns. By default
+                        this field is false and so declared workspaces are required.
+                      type: boolean
+                    readOnly:
+                      description: |-
+                        ReadOnly dictates whether a mounted volume is writable. By default this
+                        field is false and so mounted volumes are writable.
+                      type: boolean
+                  required:
+                  - name
+                  type: object
+                maxItems: 64
+                type: array
+                x-kubernetes-list-map-keys:
+                - name
+                x-kubernetes-list-type: map
+            required:
+            - adapterRef
+            type: object
+            x-kubernetes-validations:
+            - message: spec is immutable
+              rule: self == oldSelf
+            - message: params must use omitted/string or object types; object params
+                require properties
+              rule: '!has(self.params) || self.params.all(p, (!has(p.type) || p.type
+                == ''string'' || p.type == ''object'') && ((!has(p.type) || p.type
+                != ''object'') || has(p.properties)))'
+        required:
+        - spec
+        type: object
+    served: true
+    storage: true
