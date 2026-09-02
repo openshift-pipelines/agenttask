@@ -1,35 +1,51 @@
 # AgentTask
 
-Experimental API and Go framework prototype for
-[TEP-0170: AgentTask and Pluggable Agent Execution](https://github.com/tektoncd/community/pull/1263).
-It defines the Pipeline-facing `AgentTask` contract shared by independently
-deployed AgentTask Adapters.
+Experimental API and Go framework for
+[TEP-0170](https://github.com/tektoncd/community/pull/1263). It defines the
+Pipeline-facing `AgentTask` contract and the shared `CustomRun` lifecycle used
+by independently deployed adapters.
 
-This repository is an experimental PoC scaffold. The TEP is proposed and the
-`agent.tekton.dev` API is unstable. Publication does not imply TEP acceptance,
-API compatibility, or product support.
+TEP-0170 remains proposed. The `agent.tekton.dev` API is unstable and this
+repository provides no compatibility or product-support guarantee.
 
-## Current slice
+## Prototype scope
 
 Implemented:
 
-- minimal namespaced `AgentTask` v1alpha1 types and CRD;
-- CRD create-time constraints for selectors, unique declaration names, and the
-  intentionally narrowed string/object parameter surface;
-- Go create/update helpers for additional Tekton default and object-property
-  checks;
-- adapter request and observation types;
-- deterministic attempt identity and bounded result/reference validation.
+- namespaced `AgentTask` v1alpha1 types and generated CRD;
+- declaration and invocation validation for string and object params,
+  workspaces, adapter selection, and declared scalar results;
+- deterministic attempt identity and a versioned, bounded
+  `CustomRun.status.extraFields` profile;
+- a controller-runtime reconciler embedded by one selected adapter controller;
+- native execution identity immutability, credential-free references, standard
+  conditions, results, timeout detection, cancellation intent, and cleanup
+  finalization;
+- fake-client tests for success, durable cancellation, identity changes, and
+  unsafe observations.
 
-Not implemented:
+The PoC intentionally uses one adapter installation and one active replica. It
+does not yet implement distributed claiming, retries, remote resolution,
+cleanup deadlines, a standalone fake controller, full conformance, Results, or
+Chains integration. An uninstalled selector can therefore remain unclaimed.
 
-- a controller, adapter claiming, status writing, finalizers, retries, remote
-  resolution, a fake adapter, or conformance tests;
-- multi-installation safety or any production support guarantee.
+## Adapter use
 
-No admission webhook or controller invokes the Go helpers yet; only constraints
-present in the generated CRD are API-server enforced. This scaffold is therefore
-**not TEP-0170 conformant**.
+A Go adapter implements `framework.AgentTaskAdapter` and embeds the shared
+reconciler in its controller process:
+
+```go
+framework.SetupController(manager, implementation, framework.ControllerOptions{
+    Version: "poc",
+    InstallationID: "example-adapter.namespace",
+})
+```
+
+The framework is the only `CustomRun` status writer. The adapter creates or
+adopts its native execution and returns bounded observations.
+
+The first vertical integration is
+[`agenttask-adapter-lightspeed`](https://github.com/openshift-pipelines/agenttask-adapter-lightspeed).
 
 ## Development
 
@@ -40,7 +56,7 @@ make test
 ```
 
 Generated API artifacts are checked in and must remain reproducible with the
-pinned `controller-gen` version in the Makefile.
+pinned `controller-gen` version.
 
 ## License
 
