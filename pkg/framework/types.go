@@ -30,12 +30,20 @@ import (
 type State string
 
 const (
-	StatePending   State = "Pending"
-	StateAccepted  State = "Accepted"
-	StateRunning   State = "Running"
-	StateWaiting   State = "Waiting"
-	StateSucceeded State = "Succeeded"
-	StateFailed    State = "Failed"
+	StatePending    State = "Pending"
+	StateAccepted   State = "Accepted"
+	StateRunning    State = "Running"
+	StateWaiting    State = "Waiting"
+	StateCancelling State = "Cancelling"
+	StateCancelled  State = "Cancelled"
+	StateSucceeded  State = "Succeeded"
+	StateFailed     State = "Failed"
+)
+
+const (
+	ReasonAgentFailed          = "AgentFailed"
+	ReasonInfrastructureFailed = "InfrastructureFailed"
+	ReasonCleanupFailed        = "CleanupFailed"
 )
 
 // AgentTaskAdapter maps one AgentTask CustomRun to a native backend.
@@ -53,6 +61,7 @@ type Request struct {
 	AttemptNumber      int
 	AttemptID          string
 	ServiceAccountName string
+	ExecutionRef       *ExecutionReference
 }
 
 // ExecutionReference identifies the authoritative native execution. A

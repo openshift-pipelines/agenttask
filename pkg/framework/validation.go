@@ -54,9 +54,19 @@ func ValidateObservation(observation Observation, task *agentv1alpha1.AgentTask)
 	root := field.NewPath("observation")
 
 	switch observation.State {
-	case StatePending, StateAccepted, StateRunning, StateWaiting, StateSucceeded, StateFailed:
+	case StatePending, StateAccepted, StateRunning, StateWaiting, StateCancelling, StateCancelled, StateSucceeded, StateFailed:
 	default:
-		errs = append(errs, field.Invalid(root.Child("state"), "<redacted>", "must be Pending, Accepted, Running, Waiting, Succeeded, or Failed"))
+		errs = append(errs, field.Invalid(root.Child("state"), "<redacted>", "unsupported state"))
+	}
+	if observation.State == StateFailed {
+		switch observation.Reason {
+		case ReasonAgentFailed, ReasonInfrastructureFailed, ReasonCleanupFailed:
+		default:
+			errs = append(errs, field.NotSupported(root.Child("reason"), "<redacted>", []string{ReasonAgentFailed, ReasonInfrastructureFailed, ReasonCleanupFailed}))
+		}
+	}
+	if observation.State == StateCancelled && !observation.CleanupComplete {
+		errs = append(errs, field.Invalid(root.Child("cleanupComplete"), false, "must be true for Cancelled"))
 	}
 
 	if observation.Reason != "" {
@@ -114,7 +124,7 @@ func ValidateObservation(observation Observation, task *agentv1alpha1.AgentTask)
 
 func requiresExecutionReference(state State) bool {
 	switch state {
-	case StateAccepted, StateRunning, StateWaiting, StateSucceeded:
+	case StateAccepted, StateRunning, StateWaiting, StateCancelling, StateSucceeded:
 		return true
 	default:
 		return false
@@ -216,6 +226,9 @@ func ValidateCredentialFreeURI(raw string) error {
 	}
 	if parsed.User != nil {
 		return errors.New("must not contain user information")
+	}
+	if parsed.Fragment != "" {
+		return errors.New("must not contain a fragment")
 	}
 	query, err := url.ParseQuery(parsed.RawQuery)
 	if err != nil {

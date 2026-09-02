@@ -181,6 +181,9 @@ func TestValidateCredentialFreeURI(t *testing.T) {
 			}
 		})
 	}
+	if err := ValidateCredentialFreeURI("https://artifacts.example/run#access_token=sensitive-value"); err == nil {
+		t.Fatal("ValidateCredentialFreeURI() accepted a fragment")
+	}
 	if err := ValidateCredentialFreeURI("oci://registry.example/reports@sha256:abcdef"); err != nil {
 		t.Fatalf("credential-free OCI URI returned error: %v", err)
 	}
